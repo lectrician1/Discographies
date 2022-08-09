@@ -1,0 +1,22 @@
+{
+  "name": "easywikidev",
+  "version": "1.0.0",
+  "description": "Develop Wikipedia userscripts quickly with Visual Studio Code",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lectrician1/EasyWikiDev.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lectrician1/EasyWikiDev/issues"
+  },
+  "homepage": "https://github.com/lectrician1/EasyWikiDev#readme",
+  "dependencies": {
+    "@wikimedia/types-wikimedia": "^0.3.4"
+  }
+}
