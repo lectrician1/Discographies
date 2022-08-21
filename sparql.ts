@@ -1,40 +1,3 @@
-const sparqlKeywords = [
-    'BASE',
-    'PREFIX',
-    'SELECT',
-    'CONSTRUCT',
-    'DESCRIBE',
-    'ASK',
-    'ORDER BY',
-    'LIMIT',
-    'ORDER BY',
-    'FROM',
-    'GRAPH', 'STR', 'isURI',
-    'PREFIX',
-    'CONSTRUCT',
-    'LIMIT',
-    'FROM NAMED',
-    'OPTIONAL',
-    'LANG',
-    'isIRI',
-    'DESCRIBE',
-    'OFFSET',
-    'WHERE', 'UNION',
-    'LANGMATCHES',
-    'isLITERAL',
-    'ASK',
-    'DISTINCT',
-    'FILTER',
-    'DATATYPE',
-    'REGEX',
-    'REDUCED',
-    'a',
-    'BOUND',
-    'true',
-    'sameTERM',
-    'false'
-]
-
 class SparqlElement {
     query: string
 
@@ -270,8 +233,10 @@ class SolutionModifier extends SparqlElement {
 }
 
 class GroupClause extends SparqlElement {
-    constructor(groupCondition1: groupConditions: GroupCondition[]) {
-        var query = 'GROUP BY '
+    constructor(groupCondition1: GroupCondition, groupConditions: GroupCondition[]) {
+        var query = `GROUP BY ${groupCondition1}`
+
+        for (graoup)
     } 
 }
 
