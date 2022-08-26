@@ -34,7 +34,7 @@ interface SiteEntities {
     }
 }
 
-interface WikibaseClaims {
+interface WikibaseUIClaims {
     [property: string]: [{
         mainsnak: {
             datavalue: {
@@ -117,7 +117,7 @@ async function addInfo(thisEntityPageData) {
 
         var linkToID = (link) => link.replace(/.*\//, "")
 
-        function entityHasItemValues(property: string, claims: WikibaseClaims, values: Array<string>) {
+        function entityHasItemValues(property: string, claims: WikibaseUIClaims, values: Array<string>) {
             for (let claim of claims[property]) {
                 if (values.includes(claim.mainsnak.datavalue.value.id))
                     return true;
