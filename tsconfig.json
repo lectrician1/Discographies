@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
-    "lib": ["es6", "dom"],
+    "lib": ["ESNext", "dom"],
     "module": "commonjs",
-    "sourceMap": true
-  }
+    "sourceMap": true,
+    "typeRoots": ["./node_modules/@wikimedia/types-wikimedia"]
+  },
+  "include": [
+    "./node_modules/types-mediawiki"
+  ]
 }
