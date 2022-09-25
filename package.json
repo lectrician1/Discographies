@@ -18,5 +18,8 @@
   "homepage": "https://github.com/lectrician1/EasyWikiDev#readme",
   "dependencies": {
     "@wikimedia/types-wikimedia": "^0.3.4"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.5.14"
   }
 }
