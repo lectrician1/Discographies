@@ -15,36 +15,6 @@
  *  https://www.wikidata.org/wiki/User:Magnus_Manske/duplicate_item.js
  */
 
-// Store all of the site data in an object so that it can be redefined if the script needs to be used on a different site
-interface SiteData {
-    sparqlEndpoint: string
-
-    // Store entity ids used by the script in a labeled object so that they are easily understood in the codebase
-    entities: {
-        items: {
-            release_group: string
-            release: string
-            various_artists: string
-            musical_work_composition: string
-            song: string
-        }
-        properties: {
-            instance_of: string
-            subclass_of: string
-            title: string
-            genre: string
-            performer: string
-            record_label: string
-            publication_date: string
-            number_of_parts_of_this_work: string
-            tracklist: string
-            release_of: string
-            form_of_creative_work: string
-            language_of_work_or_name: string
-        }
-    }
-}
-
 // Load site-specific data for the script to use
 var siteData: SiteData
 
@@ -135,10 +105,6 @@ function createReleaseFeature(thisEntityPageData: WikibaseUIItem) {
             siteEntities.properties.tracklist
         ]
 
-        interface ReleaseGroupRelease {
-            release: SelectResult
-        }
-
         var releaseTypeID = linkToID((releaseGroupReleaseResponse.results.bindings as Array<ReleaseGroupRelease>)[0].release.value)
 
         var claimsToAdd = {
@@ -149,6 +115,9 @@ function createReleaseFeature(thisEntityPageData: WikibaseUIItem) {
         await copyItem(thisEntityPageData, true, propertiesToKeep, claimsToAdd)
     })
 }
+
+
+var linkToID = (link) => link.replace(/.*\//, "")
 
 async function chronologicalDataFeature(thisEntityPageData: WikibaseUIItem) {
     // Prevent chronological data from running on releases whose artists are "various artists"
@@ -162,73 +131,95 @@ async function chronologicalDataFeature(thisEntityPageData: WikibaseUIItem) {
     $('#createRelease').after(`<div id="chronologicalDataLabel">Loading chronological data...</div>`)
 
     var performersResults: PerformerResults = {}
-    
+
     var performerQueryList = '';
 
     // Compile list of ids of the performers we need to query data for and initialize performer results objects in performerResults object
     for (let performer of thisEntityPageData.claims[siteEntities.properties.performer]) {
         const performerID = performer.mainsnak.datavalue.value.id
 
-        performersResults[performerID] = {}
+        performersResults[performerID] = []
 
         performerQueryList += `wd:${performerID} `
     }
 
+    const userLang = mw.config.get('wgContentLanguage')
+
     // Get all the releases by the performers
-    const chronologicalDataQuery = `SELECT DISTINCT ?release ?title ?performer ?performerLabel ?type ?typeLabel ?language ?languageLabel ?date WHERE {
-            SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-            VALUES ?performer {${performerQueryList}}
-            ?release wdt:${siteEntities.properties.performer} ?performer;
-                    wdt:${siteEntities.properties.instance_of} ?type.
-            ?type wdt:${siteEntities.properties.subclass_of}* wd:${siteEntities.items.release_group}.
-            OPTIONAL { 
-                ?release wdt:${siteEntities.properties.publication_date} ?date.
-            }
-            OPTIONAL {
-                ?release wdt:${siteEntities.properties.title} ?title
-            }
-            OPTIONAL {
-                ?release wdt:${siteEntities.properties.language_of_work_or_name} ?language.
-            }
-          }`
+    const chronologicalDataQuery = `SELECT DISTINCT ?release ?releaseLabel ?performer
+    (group_concat(DISTINCT ?type;separator="|") as ?types) 
+    (group_concat(DISTINCT ?typeLabel;separator="|") as ?typeLabels)
+    (group_concat(DISTINCT ?date;separator="|") as ?dates) 
+    (group_concat(DISTINCT ?title;separator="|") as ?titles)
+    (group_concat(DISTINCT ?titleLanguage;separator="|") as ?titleLanguages) 
+    (group_concat(DISTINCT ?language;separator="|") as ?languages) 
+    (group_concat(DISTINCT ?languageLabel;separator="|") as ?languageLabels) 
+    WHERE {
+                SERVICE wikibase:label { bd:serviceParam wikibase:language "${userLang}". }
+                VALUES ?performer {${performerQueryList}}
+                ?release wdt:${siteEntities.properties.performer} ?performer;
+                         wdt:${siteEntities.properties.instance_of} ?type.
+                ?type wdt:${siteEntities.properties.subclass_of}* wd:${siteEntities.items.release_group}.
+                ?type rdfs:label ?typeLabel.
+                FILTER (lang(?typeLabel) = '${userLang}')
+                OPTIONAL { 
+                    ?release wdt:${siteEntities.properties.publication_date} ?date.
+                }
+                OPTIONAL {
+                    ?release wdt:${siteEntities.properties.title} ?title
+                    BIND ( lang(?title) AS ?titleLanguage )
+                }
+                OPTIONAL {
+                    ?release wdt:${siteEntities.properties.language_of_work_or_name} ?language.
+                    ?language rdfs:label ?languageLabel.
+                    FILTER (lang(?languageLabel) = '${userLang}')
+                }
+              }
+    GROUP BY ?release ?releaseLabel ?performer`
 
     const chronologicalDataResponse = await sparqlQuery(chronologicalDataQuery) as SelectResponse
 
     
+    var entityHTML = (link: string, label: string) => `<a href="${link}">${label}</a>` 
+
+    var entityResultHTML = (link: SelectResult, label: SelectResult) => entityHTML(link.value, label.value)
+
+    function joinedResultsHTML(links: SelectResult, labels: SelectResult) {
+        if (links.value === '') return ''
+        const splitLinks = links.value.split('|')
+        const splitLabels = labels.value.split('|')
+        return splitLinks.map((link, index) => entityHTML(link, splitLabels[index])).join(', ')
+    }
+
+    function titlesHTML(titles: SelectResult, languages: SelectResult) {
+        if (titles.value === '') return ''
+        const splitTitles = titles.value.split('|')
+        const splitLanguages = languages ? languages.value.split('|') : []
+        const titlesWithLang = splitTitles.map((title, index) => `${title} (${splitLanguages[index]})`)
+        return titlesWithLang.join(', ')
+    }
+
+    function joinedDates(dates: SelectResult) {
+        if (dates.value === '') return ''
+        const splitDates = dates.value.split('|')
+        const prettyDates = splitDates.map((date) => new Date(date).toISOString().split('T')[0])
+        return prettyDates.join(', ')
+    }
+
 
     // Parse the release data so that it is easily usable and move it to appropriate performers 
     for (var queryResult of chronologicalDataResponse.results.bindings as Array<PerformerReleasesQueryResult>) {
         var performerID = linkToID(queryResult.performer.value)
-        var releaseID = linkToID(queryResult.release.value)
 
         // Move results data to simplified parsed list and add it to its performer list
-        performersResults[performerID][releaseID].push(
-            new ParsedResult(
-                new ResultField(
-                    linkToID(queryResult.type.value),
-                    queryResult.typeLabel.value,
-                    queryResult.type.value
-                ),
-                queryResult.date ? queryResult.date!.value : undefined,
-                new ResultField(
-                    performerID,
-                    queryResult.performerLabel.value,
-                    queryResult.performer.value
-                ),
-                {
-                    link: queryResult.release.value,
-                    id: releaseID
-                },
-                queryResult.title ? {
-                    title: queryResult.title.value,
-                    language: queryResult.title.lang
-                } : undefined,
-                queryResult.language ? new ResultField(
-                    linkToID(queryResult.language.value),
-                    queryResult.languageLabel.value,
-                    queryResult.language.value
-                ) : undefined
-            )
+        performersResults[performerID].push(
+            {
+                release: entityResultHTML(queryResult.release, queryResult.releaseLabel),
+                types: joinedResultsHTML(queryResult.types, queryResult.typeLabels),
+                titles: titlesHTML(queryResult.titles, queryResult.titleLanguages),
+                dates: joinedDates(queryResult.dates),
+                languages: joinedResultsHTML(queryResult.languages, queryResult.languageLabels)
+            }
         )
     }
 
@@ -237,10 +228,9 @@ async function chronologicalDataFeature(thisEntityPageData: WikibaseUIItem) {
 
     // Make list for each perfomer
     for (const [performerID, performerResults] of Object.entries(performersResults)) {
-        // Add performer heading using first element in performer data
-        $('#mainChronologicalData').append(
-            `<h2>${entityResultFieldLinkHTML(performerResults[thisEntityPageData.title][0].performer)}</h2>`
-        )
+        // Add performer heading
+        const performerLabel = $(`#${siteEntities.properties.performer}`).find(`a[href='/wiki/${performerID}']`).html()
+        $('#mainChronologicalData').append(`<h2>${performerLabel}</h2>`)
 
         // Add table
         const performerTableID = `${performerID}-chronological-data`
@@ -248,8 +238,9 @@ async function chronologicalDataFeature(thisEntityPageData: WikibaseUIItem) {
         $('#mainChronologicalData').append(`<table id="${performerTableID}">
             <thead>
             <tr>
-                <th>${entityLinkNameIDHTML('title', siteEntities.properties.title)}</th>
+                <th>release</th>
                 <th>${entityLinkNameIDHTML('instance of', siteEntities.properties.instance_of)}</th>
+                <th>${entityLinkNameIDHTML('title', siteEntities.properties.title)}</th>
                 <th>${entityLinkNameIDHTML('publication date', siteEntities.properties.publication_date)}</th>
                 <th>${entityLinkNameIDHTML('language of work or name', siteEntities.properties.language_of_work_or_name)}</th>
             </tr>
@@ -259,31 +250,13 @@ async function chronologicalDataFeature(thisEntityPageData: WikibaseUIItem) {
         </table>`)
 
         // Add data to table
-        for (const releases of Object.values(performerResults)) {
-
-            releases.length
-
-            var firstRelease = releases.shift()
-            var concantedReleaseHTML: {
-                types: string[],
-                dates: string[],
-                languages: string[]
-            }
-
-
-
-            for (let release of releases) {
-                concantedReleaseHTML.types.push(entityResultFieldLinkHTML(release.type))
-                ${result.date ? new Date(release.date).toISOString().split('T')[0] : ''}</td>
-                <td>${entityResultFieldLinkHTML(result.language)}</td>
-            }
-
-
+        for (const release of Object.values(performerResults)) {
             $(`#${performerTableBodyID}`).append(`<tr>
-                <td>${firstRelease.title.title} (${firstRelease.title.language})</td>
-                <td>${concantedReleaseHTML.types}</td>
-                <td>${concantedReleaseHTML.dates}</td>
-                <td>${concantedReleaseHTML.languages}</td>
+                <td>${release.release}</td>
+                <td>${release.types}</td>
+                <td>${release.titles}</td>
+                <td>${release.dates}</td>
+                <td>${release.languages}</td>
             </tr>`)
         }
 
@@ -295,16 +268,6 @@ async function chronologicalDataFeature(thisEntityPageData: WikibaseUIItem) {
     $('#mainChronologicalDataLink').on('click', function () {
         $('#mainChronologicalData').slideToggle('fast');
     });
-}
-
-interface SelectResponse {
-    results: {
-        bindings: []
-    }
-}
-
-interface SelectResult {
-    value: string,
 }
 
 // Utility functions
@@ -330,8 +293,6 @@ var addItemStatement = (propID, valueID) => ({
     ]
 })
 
-var linkToID = (link) => link.replace(/.*\//, "")
-
 function entityHasStatement(property: string, values: Array<string>, entityClaims: WikibaseUIClaims,) {
     for (let claim of entityClaims[property]) {
         if (values.includes(claim.mainsnak.datavalue.value.id))
@@ -341,7 +302,7 @@ function entityHasStatement(property: string, values: Array<string>, entityClaim
 }
 
 async function getEditToken(callback) {
-    const d = await $.get('/w/api.php',({
+    const d = await $.get('/w/api.php', {
         action: 'query',
         meta: 'tokens',
         format: 'json'
@@ -378,7 +339,7 @@ async function createNewItem(q, data) {
 }
 
 async function copyItem(thisEntityPageData: WikibaseUIItem, askLabels: boolean, propertiesToKeep: string[], claimsToAdd: Object) {
-    const d = await $.get('/w/api.php',{
+    const d = await $.get('/w/api.php', {
         action: 'wbgetentities',
         ids: thisEntityPageData.title,
         format: 'json'
@@ -424,11 +385,41 @@ async function sparqlAsk(query: string, callback: () => void) {
 
 var entityLinkHTML = (label, link) => `<a href="${link}">${label}</a>`
 
-var entityResultFieldLinkHTML = (result: ResultField) => `<a href="${result.link}">${result.label}</a>`
-
 var entityLinkNameIDHTML = (name: string, id: string) => `<a href="https://www.wikidata.org/wiki/Special:EntityData/${id}">${name}</a>`
 
-var entityLinkNameIDParenthesesHTML = (result: ResultField) => `<a href="${result.link}">${result.label} (${result.id})</a>`
+// Store all of the site data in an object so that it can be redefined if the script needs to be used on a different site
+interface SiteData {
+    sparqlEndpoint: string
+
+    // Store entity ids used by the script in a labeled object so that they are easily understood in the codebase
+    entities: {
+        items: {
+            release_group: string
+            release: string
+            various_artists: string
+            musical_work_composition: string
+            song: string
+        }
+        properties: {
+            instance_of: string
+            subclass_of: string
+            title: string
+            genre: string
+            performer: string
+            record_label: string
+            publication_date: string
+            number_of_parts_of_this_work: string
+            tracklist: string
+            release_of: string
+            form_of_creative_work: string
+            language_of_work_or_name: string
+        }
+    }
+}
+
+interface ReleaseGroupRelease {
+    release: SelectResult
+}
 
 // Wikibase API interfaces
 interface WikibaseUIItem {
@@ -456,50 +447,39 @@ interface BoolResponse {
 
 // Non-parsed query data structure
 
+interface SelectResult {
+    value: string,
+}
+
 interface PerformerReleasesQueryResult {
     release: SelectResult,
-    title?: {
-        value: string,
-        lang: string
-    },
+    releaseLabel: SelectResult,
     performer: SelectResult,
-    performerLabel: SelectResult,
-    type: SelectResult,
-    typeLabel: SelectResult,
-    language?: SelectResult,
-    languageLabel?: SelectResult
-    date?: SelectResult
+    types: SelectResult,
+    typeLabels: SelectResult,
+    dates: SelectResult,
+    titles: SelectResult,
+    titleLanguages: SelectResult,
+    languages: SelectResult,
+    languageLabels: SelectResult
+}
+
+interface ParsedResult {
+    release: string,
+    types: string,
+    dates: string,
+    titles: string,
+    languages: string
+}
+
+interface SelectResponse {
+    results: {
+        bindings: []
+    }
 }
 
 // Parsed query data structure
 
-class ParsedResult {
-    constructor(
-        public type: ResultField,
-        public date: string,
-        public performer: ResultField,
-        public release: {
-            id: string,
-            link: string
-        },
-        public title: {
-            title: string,
-            language: string // xml:lang
-        },
-        public language: ResultField
-    ) { }
-}
-
-class ResultField {
-    constructor(
-        public id: string,
-        public label: string,
-        public link: string
-    ) { }
-}
-
 interface PerformerResults {
-    [performerID: string]: {
-        [releaseID: string]: ParsedResult[]
-    }
+    [performerID: string]: ParsedResult[]
 }

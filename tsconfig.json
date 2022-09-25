@@ -1,11 +1,8 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext", "dom"],
-    "module": "commonjs",
+    "lib": ["ES2022", "dom"],
     "sourceMap": true,
     "typeRoots": ["./node_modules/@wikimedia/types-wikimedia"]
   },
-  "include": [
-    "./node_modules/types-mediawiki"
-  ]
+  "include": []
 }

@@ -1,4 +1,7 @@
 /**
+ * THIS IS A COMPILED TYPESCRIPT FILE
+ * SEE THE ACTUAL SOURCE CODE AT User:Lectrician1/discographies.js/ts.js
+ *
  * Name: discographies.js
  * Description: Shows useful discography data and functions on
  *  discography items
@@ -91,9 +94,10 @@ switch (window.location.hostname) {
 }
 var siteEntities = siteData.entities;
 var instanceOfClass = "wdt:".concat(siteEntities.properties.instance_of, "/wdt:").concat(siteEntities.properties.subclass_of, "*");
+var api = new mw.Api;
 mw.hook("wikibase.entityPage.entityLoaded").add(function (thisEntityPageData) {
     return __awaiter(this, void 0, void 0, function () {
-        var thisEntity, ifReleaseGroupQuery;
+        var ifReleaseGroupQuery;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -102,25 +106,21 @@ mw.hook("wikibase.entityPage.entityLoaded").add(function (thisEntityPageData) {
                         return [2 /*return*/];
                     if (!thisEntityPageData.claims.hasOwnProperty(siteEntities.properties.instance_of))
                         return [2 /*return*/];
-                    thisEntity = {
-                        id: thisEntityPageData.title,
-                        typeID: thisEntityPageData.claims.P31[0].mainsnak.datavalue.value.id
-                    };
-                    ifReleaseGroupQuery = "ASK {\n        wd:".concat(thisEntity.id, " ").concat(instanceOfClass, " wd:").concat(siteEntities.items.release_group, ";\n        wdt:").concat(siteEntities.properties.performer, " [].\n    }");
+                    ifReleaseGroupQuery = "ASK {\n        wd:".concat(thisEntityPageData.title, " ").concat(instanceOfClass, " wd:").concat(siteEntities.items.release_group, ";\n        wdt:").concat(siteEntities.properties.performer, " [].\n    }");
                     return [4 /*yield*/, sparqlQuery(ifReleaseGroupQuery)];
                 case 1:
                     // Run 
-                    (_a.sent()).boolean ? releaseGroupFeature(thisEntity, thisEntityPageData) : {};
+                    (_a.sent()).boolean ? releaseGroupFeature(thisEntityPageData) : {};
                     return [2 /*return*/];
             }
         });
     });
 });
-function releaseGroupFeature(thisEntity, thisEntityPageData) {
-    createReleaseFeature(thisEntity);
+function releaseGroupFeature(thisEntityPageData) {
+    createReleaseFeature(thisEntityPageData);
     chronologicalDataFeature(thisEntityPageData);
 }
-function createReleaseFeature(thisEntity) {
+function createReleaseFeature(thisEntityPageData) {
     $('body').append("<link rel=\"stylesheet\" type=\"text/css\" href=\"https://cdn.datatables.net/1.12.1/css/jquery.dataTables.css\">\n  \n    <script type=\"text/javascript\" charset=\"utf8\" src=\"https://cdn.datatables.net/1.12.1/js/jquery.dataTables.js\"></script>");
     // Create release button
     $('#toc').after("<div><a id=\"createRelease\">Create a release for this release group</a></div>");
@@ -130,7 +130,7 @@ function createReleaseFeature(thisEntity) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        releaseGroupReleaseQuery = "SELECT ?release WHERE {\n                    ?release wdt:".concat(siteEntities.properties.release_of, " wd:").concat(thisEntity.typeID, ";\n                             wdt:").concat(siteEntities.properties.subclass_of, "* wd:").concat(siteEntities.items.release, ".\n                  }");
+                        releaseGroupReleaseQuery = "SELECT ?release WHERE {\n                    ?release wdt:".concat(siteEntities.properties.release_of, " wd:").concat(thisEntityPageData.claims.P31[0].mainsnak.datavalue.value.id, ";\n                             wdt:").concat(siteEntities.properties.subclass_of, "* wd:").concat(siteEntities.items.release, ".\n                  }");
                         return [4 /*yield*/, sparqlQuery(releaseGroupReleaseQuery)];
                     case 1:
                         releaseGroupReleaseResponse = _a.sent();
@@ -144,8 +144,8 @@ function createReleaseFeature(thisEntity) {
                             siteEntities.properties.tracklist
                         ];
                         releaseTypeID = linkToID(releaseGroupReleaseResponse.results.bindings[0].release.value);
-                        claimsToAdd = __assign(__assign({}, addItemStatement(siteEntities.properties.release_of, thisEntity.id)), addItemStatement(siteEntities.properties.instance_of, releaseTypeID));
-                        return [4 /*yield*/, copyItem(thisEntity, true, propertiesToKeep, claimsToAdd)];
+                        claimsToAdd = __assign(__assign({}, addItemStatement(siteEntities.properties.release_of, thisEntityPageData.title)), addItemStatement(siteEntities.properties.instance_of, releaseTypeID));
+                        return [4 /*yield*/, copyItem(thisEntityPageData, true, propertiesToKeep, claimsToAdd)];
                     case 2:
                         _a.sent();
                         return [2 /*return*/];
@@ -154,11 +154,34 @@ function createReleaseFeature(thisEntity) {
         });
     });
 }
+var linkToID = function (link) { return link.replace(/.*\//, ""); };
 function chronologicalDataFeature(thisEntityPageData) {
     return __awaiter(this, void 0, void 0, function () {
-        var performersResults, performerQueryList, _i, _a, performer, performerID_1, chronologicalDataQuery, chronologicalDataResponse, _b, _c, queryResult, performerID, _d, _e, _f, performerID_2, performerResults, performerTableID, performerTableBodyID, _g, performerResults_1, result;
-        return __generator(this, function (_h) {
-            switch (_h.label) {
+        function joinedResultsHTML(links, labels) {
+            if (links.value === '')
+                return '';
+            var splitLinks = links.value.split('|');
+            var splitLabels = labels.value.split('|');
+            return splitLinks.map(function (link, index) { return entityHTML(link, splitLabels[index]); }).join(', ');
+        }
+        function titlesHTML(titles, languages) {
+            if (titles.value === '')
+                return '';
+            var splitTitles = titles.value.split('|');
+            var splitLanguages = languages ? languages.value.split('|') : [];
+            var titlesWithLang = splitTitles.map(function (title, index) { return "".concat(title, " (").concat(splitLanguages[index], ")"); });
+            return titlesWithLang.join(', ');
+        }
+        function joinedDates(dates) {
+            if (dates.value === '')
+                return '';
+            var splitDates = dates.value.split('|');
+            var prettyDates = splitDates.map(function (date) { return new Date(date).toISOString().split('T')[0]; });
+            return prettyDates.join(', ');
+        }
+        var performersResults, performerQueryList, _i, _a, performer, performerID_1, userLang, chronologicalDataQuery, chronologicalDataResponse, entityHTML, entityResultHTML, _b, _c, queryResult, performerID, _d, _e, _f, performerID_2, performerResults, performerLabel, performerTableID, performerTableBodyID, _g, _h, release;
+        return __generator(this, function (_j) {
+            switch (_j.label) {
                 case 0:
                     // Prevent chronological data from running on releases whose artists are "various artists"
                     if (entityHasStatement(siteEntities.properties.performer, [siteEntities.items.various_artists], thisEntityPageData.claims))
@@ -167,38 +190,47 @@ function chronologicalDataFeature(thisEntityPageData) {
                     $('#createRelease').after("<div id=\"chronologicalDataLabel\">Loading chronological data...</div>");
                     performersResults = {};
                     performerQueryList = '';
-                    // Compile list of ids of the performers we need to query data for and initialize performer results arrays in performerResults object
+                    // Compile list of ids of the performers we need to query data for and initialize performer results objects in performerResults object
                     for (_i = 0, _a = thisEntityPageData.claims[siteEntities.properties.performer]; _i < _a.length; _i++) {
                         performer = _a[_i];
                         performerID_1 = performer.mainsnak.datavalue.value.id;
                         performersResults[performerID_1] = [];
                         performerQueryList += "wd:".concat(performerID_1, " ");
                     }
-                    chronologicalDataQuery = "SELECT ?release ?releaseLabel ?performer ?performerLabel ?type ?typeLabel ?language ?languageLabel ?date WHERE {\n            SERVICE wikibase:label { bd:serviceParam wikibase:language \"[AUTO_LANGUAGE],en\". }\n            VALUES ?performer {".concat(performerQueryList, "}\n            ?release wdt:").concat(siteEntities.properties.performer, " ?performer;\n                    wdt:").concat(siteEntities.properties.instance_of, " ?type;\n                    wdt:").concat(siteEntities.properties.language_of_work_or_name, " ?language.\n            ?type wdt:").concat(siteEntities.properties.subclass_of, "* wd:").concat(siteEntities.items.release_group, ".\n            OPTIONAL { ?release wdt:").concat(siteEntities.properties.publication_date, " ?date }\n          }");
+                    userLang = mw.config.get('wgContentLanguage');
+                    chronologicalDataQuery = "SELECT DISTINCT ?release ?releaseLabel ?performer\n    (group_concat(DISTINCT ?type;separator=\"|\") as ?types) \n    (group_concat(DISTINCT ?typeLabel;separator=\"|\") as ?typeLabels)\n    (group_concat(DISTINCT ?date;separator=\"|\") as ?dates) \n    (group_concat(DISTINCT ?title;separator=\"|\") as ?titles)\n    (group_concat(DISTINCT ?titleLanguage;separator=\"|\") as ?titleLanguages) \n    (group_concat(DISTINCT ?language;separator=\"|\") as ?languages) \n    (group_concat(DISTINCT ?languageLabel;separator=\"|\") as ?languageLabels) \n    WHERE {\n                SERVICE wikibase:label { bd:serviceParam wikibase:language \"".concat(userLang, "\". }\n                VALUES ?performer {").concat(performerQueryList, "}\n                ?release wdt:").concat(siteEntities.properties.performer, " ?performer;\n                         wdt:").concat(siteEntities.properties.instance_of, " ?type.\n                ?type wdt:").concat(siteEntities.properties.subclass_of, "* wd:").concat(siteEntities.items.release_group, ".\n                ?type rdfs:label ?typeLabel.\n                FILTER (lang(?typeLabel) = '").concat(userLang, "')\n                OPTIONAL { \n                    ?release wdt:").concat(siteEntities.properties.publication_date, " ?date.\n                }\n                OPTIONAL {\n                    ?release wdt:").concat(siteEntities.properties.title, " ?title\n                    BIND ( lang(?title) AS ?titleLanguage )\n                }\n                OPTIONAL {\n                    ?release wdt:").concat(siteEntities.properties.language_of_work_or_name, " ?language.\n                    ?language rdfs:label ?languageLabel.\n                    FILTER (lang(?languageLabel) = '").concat(userLang, "')\n                }\n              }\n    GROUP BY ?release ?releaseLabel ?performer");
                     return [4 /*yield*/, sparqlQuery(chronologicalDataQuery)];
                 case 1:
-                    chronologicalDataResponse = _h.sent();
+                    chronologicalDataResponse = _j.sent();
+                    entityHTML = function (link, label) { return "<a href=\"".concat(link, "\">").concat(label, "</a>"); };
+                    entityResultHTML = function (link, label) { return entityHTML(link.value, label.value); };
                     // Parse the release data so that it is easily usable and move it to appropriate performers 
                     for (_b = 0, _c = chronologicalDataResponse.results.bindings; _b < _c.length; _b++) {
                         queryResult = _c[_b];
                         performerID = linkToID(queryResult.performer.value);
                         // Move results data to simplified parsed list and add it to its performer list
-                        performersResults[performerID].push(new ParsedResult(new ResultField(linkToID(queryResult.type.value), queryResult.typeLabel.value, queryResult.type.value), queryResult.date ? queryResult.date.value : '', new ResultField(performerID, queryResult.performerLabel.value, queryResult.performer.value), new ResultField(linkToID(queryResult.release.value), queryResult.releaseLabel.value, queryResult.release.value), new ResultField(linkToID(queryResult.language.value), queryResult.languageLabel.value, queryResult.language.value)));
+                        performersResults[performerID].push({
+                            release: entityResultHTML(queryResult.release, queryResult.releaseLabel),
+                            types: joinedResultsHTML(queryResult.types, queryResult.typeLabels),
+                            titles: titlesHTML(queryResult.titles, queryResult.titleLanguages),
+                            dates: joinedDates(queryResult.dates),
+                            languages: joinedResultsHTML(queryResult.languages, queryResult.languageLabels)
+                        });
                     }
                     // Create chronological data storage element
                     $("#chronologicalDataLabel").after("<div id=\"mainChronologicalData\" style=\"display: none\"></div>");
                     // Make list for each perfomer
                     for (_d = 0, _e = Object.entries(performersResults); _d < _e.length; _d++) {
                         _f = _e[_d], performerID_2 = _f[0], performerResults = _f[1];
-                        // Add performer heading
-                        $('#mainChronologicalData').append("<h2>".concat(entityResultFieldLinkHTML(performerResults[0].performer), "</h2>"));
+                        performerLabel = $("#".concat(siteEntities.properties.performer)).find("a[href='/wiki/".concat(performerID_2, "']")).html();
+                        $('#mainChronologicalData').append("<h2>".concat(performerLabel, "</h2>"));
                         performerTableID = "".concat(performerID_2, "-chronological-data");
                         performerTableBodyID = "".concat(performerID_2, "-chronological-data-body");
-                        $('#mainChronologicalData').append("<table id=\"".concat(performerTableID, "\">\n            <thead>\n            <tr>\n                <th>Name</th>\n                <th>").concat(entityLinkNameIDHTML('instance of', siteEntities.properties.instance_of), "</th>\n                <th>").concat(entityLinkNameIDHTML('publication date', siteEntities.properties.publication_date), "</th>\n                <th>").concat(entityLinkNameIDHTML('language of work or name', siteEntities.properties.language_of_work_or_name), "</th>\n            </tr>\n            </thead>\n            <tbody id=\"").concat(performerTableBodyID, "\">\n            </tbody>\n        </table>"));
+                        $('#mainChronologicalData').append("<table id=\"".concat(performerTableID, "\">\n            <thead>\n            <tr>\n                <th>release</th>\n                <th>").concat(entityLinkNameIDHTML('instance of', siteEntities.properties.instance_of), "</th>\n                <th>").concat(entityLinkNameIDHTML('title', siteEntities.properties.title), "</th>\n                <th>").concat(entityLinkNameIDHTML('publication date', siteEntities.properties.publication_date), "</th>\n                <th>").concat(entityLinkNameIDHTML('language of work or name', siteEntities.properties.language_of_work_or_name), "</th>\n            </tr>\n            </thead>\n            <tbody id=\"").concat(performerTableBodyID, "\">\n            </tbody>\n        </table>"));
                         // Add data to table
-                        for (_g = 0, performerResults_1 = performerResults; _g < performerResults_1.length; _g++) {
-                            result = performerResults_1[_g];
-                            $("#".concat(performerTableBodyID)).append("<tr>\n                <td>".concat(entityResultFieldLinkHTML(result.release), "</td>\n                <td>").concat(entityResultFieldLinkHTML(result.type), "</td>\n                <td>").concat(new Date(result.date).toISOString().split('T')[0], "</td>\n                <td>").concat(entityResultFieldLinkHTML(result.language), "</td>\n            </tr>"));
+                        for (_g = 0, _h = Object.values(performerResults); _g < _h.length; _g++) {
+                            release = _h[_g];
+                            $("#".concat(performerTableBodyID)).append("<tr>\n                <td>".concat(release.release, "</td>\n                <td>").concat(release.types, "</td>\n                <td>").concat(release.titles, "</td>\n                <td>").concat(release.dates, "</td>\n                <td>").concat(release.languages, "</td>\n            </tr>"));
                         }
                         $("#".concat(performerTableID)).DataTable();
                     }
@@ -236,7 +268,6 @@ var addItemStatement = function (propID, valueID) {
         ],
         _a);
 };
-var linkToID = function (link) { return link.replace(/.*\//, ""); };
 function entityHasStatement(property, values, entityClaims) {
     for (var _i = 0, _a = entityClaims[property]; _i < _a.length; _i++) {
         var claim = _a[_i];
@@ -313,19 +344,19 @@ function createNewItem(q, data) {
         });
     });
 }
-function copyItem(thisEntity, askLabels, propertiesToKeep, claimsToAdd) {
+function copyItem(thisEntityPageData, askLabels, propertiesToKeep, claimsToAdd) {
     return __awaiter(this, void 0, void 0, function () {
         var d, eNow, data;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, $.get('/w/api.php', {
                         action: 'wbgetentities',
-                        ids: thisEntity.id,
+                        ids: thisEntityPageData.title,
                         format: 'json'
                     })];
                 case 1:
                     d = _a.sent();
-                    eNow = d.entities[thisEntity.id];
+                    eNow = d.entities[thisEntityPageData.title];
                     $.each(eNow.claims, function (p, v) {
                         if (propertiesToKeep.includes(String(p)))
                             $.each(v, function (i, c) {
@@ -347,7 +378,7 @@ function copyItem(thisEntity, askLabels, propertiesToKeep, claimsToAdd) {
                         data.labels = eNow.labels || {};
                         data.aliases = eNow.aliases || {};
                     }
-                    return [4 /*yield*/, createNewItem(thisEntity.id, data)];
+                    return [4 /*yield*/, createNewItem(thisEntityPageData.title, data)];
                 case 2:
                     _a.sent();
                     return [2 /*return*/];
@@ -378,24 +409,4 @@ function sparqlAsk(query, callback) {
     });
 }
 var entityLinkHTML = function (label, link) { return "<a href=\"".concat(link, "\">").concat(label, "</a>"); };
-var entityResultFieldLinkHTML = function (result) { return "<a href=\"".concat(result.link, "\">").concat(result.label, "</a>"); };
 var entityLinkNameIDHTML = function (name, id) { return "<a href=\"https://www.wikidata.org/wiki/Special:EntityData/".concat(id, "\">").concat(name, "</a>"); };
-// Parsed query data structure
-var ParsedResult = /** @class */ (function () {
-    function ParsedResult(type, date, performer, release, language) {
-        this.type = type;
-        this.date = date;
-        this.performer = performer;
-        this.release = release;
-        this.language = language;
-    }
-    return ParsedResult;
-}());
-var ResultField = /** @class */ (function () {
-    function ResultField(id, label, link) {
-        this.id = id;
-        this.label = label;
-        this.link = link;
-    }
-    return ResultField;
-}());
