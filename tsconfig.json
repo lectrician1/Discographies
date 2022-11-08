@@ -1,8 +1,5 @@
 {
-  "compilerOptions": {
-    "lib": ["ES2022", "dom"],
-    "sourceMap": true,
-    "typeRoots": ["./node_modules/@wikimedia/types-wikimedia"]
-  },
-  "include": []
+    "compilerOptions": {
+        "lib": ["es2015", "dom"]
+    }
 }
