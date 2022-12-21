@@ -45,7 +45,7 @@ mw.hook("wikibase.entityPage.entityLoaded").add(async function (thisEntityPageDa
 	// Run 
 	if ((await sparqlQuery(siteData, ifReleaseGroupQuery) as AskQueryResponse).boolean) {
 		await startShowDiscography(thisEntityPageData, siteData)
-		await startDiscographyTools(thisEntityPageData, siteData)
+		await showCreateRelease(thisEntityPageData, siteData)
 	}
 
 	let isMusicalWork = (p31Value: WikibaseStatement) => {
