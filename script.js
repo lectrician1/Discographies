@@ -1,22 +1,42 @@
-jQuery(function () {
-    var urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('diff')) {
-        var preloadPage = 'User:Lectrician1/new_revision_discussion';
-        var talkPagePath = $('#ca-talk > a').attr('href');
-        var revisionUsername = $('#mw-diff-ntitle2 > a > bdi').html();
-        var possibleRevisionDescription = $('#mw-diff-ntitle3 > span').html();
-        // if possibleRevisionDescription starts with '(' then slice the ends. otherwise return ''
-        var revisionDescription = possibleRevisionDescription.startsWith('(') ? possibleRevisionDescription.slice(1, -1) + ' ' : '';
-        var preloadParams = [
-            location.host,
-            urlParams.get('diff'),
-            urlParams.get('oldid'),
-            urlParams.get('title'),
-            revisionUsername
-        ];
-        var preloadTitle = "Revision ".concat(revisionDescription, "by ").concat(revisionUsername);
-        var preloadParamsText = preloadParams.map(function (param) { return "&preloadparams[]=".concat(param); }).join('');
-        var newTopicURL = encodeURI("".concat(location.origin).concat(talkPagePath, "?action=edit&section=new&preloadtitle=").concat(preloadTitle, "&preload=").concat(preloadPage).concat(preloadParamsText));
-        $('#mw-diff-ntitle1 > strong').append("\n\t\t\t<span>(<a href=\"".concat(newTopicURL, "\">discuss</a>)</span>\n\t\t"));
-    }
-});
+(()=>{var _=class{constructor(t,e){this.id=t;this.label=e;this.id=t,this.label=e}},l=class extends _{},g=class extends _{},w=class extends g{},h=class extends _{},v=class{constructor(t){this.name=t}},m=class extends v{constructor(e,r,i,s){super(r);this.parentVariable=e,this.property=i,this.optional=s}},S=class extends v{constructor(t){super(t)}createGroupQuery(){return`?${this.name} ?${this.name}Label `}createSelectQuery(){return`?${this.name} ?${this.name}Label `}resultToTableCell(t){return P(t[this.name].value,t[`${this.name}Label`].value)}},f=class extends m{constructor(t,e,r,i){super(t,e,r,i)}createGroupQuery(){return`(GROUP_CONCAT (DISTINCT ?${this.name}; SEPARATOR = "|") AS ?${this.name}s)
+(GROUP_CONCAT (DISTINCT ?${this.name}Label; SEPARATOR = "|") AS ?${this.name}Labels)
+`}createSelectQuery(){return`?${this.name} ?${this.name}Label `}createQuery(){return`?${this.parentVariable.name} wdt:${this.property.id} ?${this.name}.
+`}resultToTableCell(t){let e=t[`${this.name}s`],r=t[`${this.name}Labels`];if(e.value==="")return"";let i=e.value.split("|"),s=r.value.split("|");return i.map((n,o)=>P(n,s[o])).join(", ")}},T=class extends m{constructor(t,e,r,i){super(t,e,r,i)}createGroupQuery(){return`(GROUP_CONCAT (DISTINCT ?${this.name}; SEPARATOR = "|") AS ?${this.name}s)
+`}createSelectQuery(){return`?${this.name} `}createQuery(){return`?${this.parentVariable.name} wdt:${this.property.id} ?${this.name}.
+`}resultToTableCell(t){let e=t[`${this.name}s`];return e.value===""?"":e.value.split("|").map(s=>new Date(s).toISOString().split("T")[0]).join(", ")}},W=class extends m{constructor(t,e,r,i){super(t,e,r,i)}createGroupQuery(){return`(GROUP_CONCAT (?${this.name}; SEPARATOR = "|") AS ?${this.name}s)
+(GROUP_CONCAT (?${this.name}Language; SEPARATOR = "|") AS ?${this.name}Languages)
+`}createSelectQuery(){return`?${this.name} ?${this.name}Language `}createQuery(){return`?${this.parentVariable.name} wdt:${this.property.id} ?${this.name}.
+BIND ( lang(?${this.name}) AS ?${this.name}Language )
+`}resultToTableCell(t){let e=t[`${this.name}s`],r=t[`${this.name}Languages`];if(e.value==="")return"";let i=e.value.split("|"),s=r?r.value.split("|"):[];return i.map((o,b)=>`${o} (${s[b]})`).join(", ")}};async function y(a,t){return await $.post(a.sparqlEndpoint,{query:t})}var I=a=>a.replace(/.*\//,""),P=(a,t)=>`<a href="${a}">${t}</a>`;async function Q(a,t,e){var i=(await $.get("/w/api.php",{action:"wbgetentities",ids:a,format:"json"})).entities[a];$.each(i.claims,function(n,o){t.includes(String(n))?$.each(o,(b,c)=>{delete c.id}):delete i.claims[n]});var s={claims:{...i.claims,...e}};console.log(s),await L(a,s)}async function L(a,t){await q(async function(e){let r=await $.post("/w/api.php",{action:"wbeditentity",new:"item",data:JSON.stringify(t),token:e,summary:"Item release created from "+a,format:"json"});if(r.success==1){var i=r.entity.id,s="/wiki/"+i;window.open(s,"_blank")}else console.log(r),alert("A problem occurred, check JavaScript console for errors")})}async function q(a){var e=(await $.get("/w/api.php",{action:"query",meta:"tokens",format:"json"})).query.tokens.csrftoken;if(typeof e>"u"){alert("Problem getting edit token");return}await a(e)}var k=(a,t)=>({[a]:[{mainsnak:{snaktype:"value",property:a,datavalue:{value:{"entity-type":"item",id:t},type:"wikibase-entityid"},datatype:"wikibase-item"},type:"statement",rank:"normal"}]});async function x(a,t){await O(a,t)}async function O(a,t){let e=t.entities,r=a.title;$("#discographies").append('<a id="createRelease">Create release</a>'),$("#createRelease").on("click",async function(){let i="release",s=`SELECT ?release WHERE {
+                    ?${i} wdt:${e.properties.release_of.id} wd:${a.claims.P31[0].mainsnak.datavalue.value.id};
+                             wdt:${e.properties.subclass_of.id}* wd:${e.items.release.id}.
+                  }`;var n=await y(t,s),o=[e.properties.performer,e.properties.genre,e.properties.number_of_parts_of_this_work,e.properties.publication_date,e.properties.record_label,e.properties.title,e.properties.tracklist].map(d=>d.id),b=I(n.results.bindings[0][i].value),c={...k(e.properties.release_of.id,r),...k(e.properties.instance_of.id,b)};await Q(r,o,c)})}async function R(a,t){console.log("hi");var e=t.entities;$("body").append(`<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.css">
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.js"><\/script>`);let r="chronologicalData";if($("#discographies").append(`<div id="${r}"></div>`),!V(e.properties.performer.id,[e.items.various_artists.id],a.claims))for(let i of a.claims[e.properties.performer.id]){let s=i.mainsnak.datavalue.value.id,n=$(`#${e.properties.performer.id}`).find(`a[href='/wiki/${s}']`).html(),o=`${s}-chronological-data`;$(`#${r}`).append(`<div id="${o}">
+			<a>Show chronological data for ${n}</a>
+			<span></span>
+			<table style="display: none"></table>
+		</div>`),$(`#${o} a`).one("click",async function(){$(`#${o} > span`).html("Loading...");let b=mw.config.get("wgContentLanguage"),c=new S("label"),d=[c,new f(c,"release",e.properties.instance_of,!1),new f(c,"release_type",e.properties.form_of_creative_work,!0),new T(c,"date",e.properties.publication_date,!0),new W(c,"title",e.properties.title,!0),new f(c,"language",e.properties.language_of_work_or_name,!0)],u="SELECT DISTINCT ";for(let p of d)u+=p.createGroupQuery();u+=`WHERE {
+        {
+            SELECT `;for(let p of d)u+=p.createSelectQuery();u+=`WHERE {
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "${b}". }
+        VALUES ?performer {wd:${s}}
+        ?label wdt:${e.properties.performer.id} ?performer.
+        ?release wdt:${e.properties.subclass_of.id}* wd:${e.items.release_group.id}.
+    `;for(let p of d)p instanceof m&&(p.optional?u+=`OPTIONAL {
+                    ${p.createQuery()}
+                }
+                `:u+=p.createQuery());u+=`} 
+        }
+    } GROUP BY ${c.createSelectQuery()}`,console.log(u);let A=await y(t,u);$(`#${o} table`).append(`
+        <thead>
+            <tr></tr>
+        </thead>
+        <tbody></tbody>`);for(let p of d)$(`#${o} > table > thead > tr`).append(`<th>${p.name}</th>`);for(var E of A.results.bindings){$(`#${o} > table > tbody`).append("<tr></tr>");for(let p of d){let D=p.resultToTableCell(E);$(`#${o} > table > tbody > tr`).eq(-1).append(`<td>${D}</td>`)}}$(`#${o} > table`).DataTable(),$(`#${o} > div > table`).show(),$(`#${o} > span`).remove(),$(`#${o} > a`).on("click",function(){$(`#${o} > div`).slideToggle("fast")})})}}function V(a,t,e){for(let r of e[a])if(t.includes(r.mainsnak.datavalue.value.id))return!0;return!1}async function C(a,t){let e="createTrack",r={"music track with vocals":t.items.music_track_with_vocals.id,"music track without vocals":t.items.music_track_without_vocals.id,"audio track":t.items.audio_track.id};j(e,r),G(e,t,a)}function j(a,t){$(".wikibase-sitelinkgrouplistview").append(`<form id="${a}">
+    <label for="type">Create a track:</label>
+    <select id="trackType" name="type">
+    </select>
+    <input type="submit">
+  </form>`),$.each(t,function(e,r){$("#trackType").append(`<option value="${r}">${e}</option>`)})}function G(a,t,e){$(`#${a}`).on("submit",async function(r){r.preventDefault();let i=String($("#trackType").val()),s=[t.properties.title.id,t.properties.performer.id,t.properties.publication_date.id],n={...k(t.properties.instance_of.id,i),...k(t.properties.recording_performance_of.id,e)};await Q(e,s,n)})}mw.hook("wikibase.entityPage.entityLoaded").add(async function(a){let t=N();var e=t.entities;if(a.type!=="item"||!a.claims.hasOwnProperty(e.properties.instance_of.id))return;let r=a.title,i=`ASK {
+        wd:${r} wdt:${e.properties.instance_of.id}/wdt:${e.properties.subclass_of.id}* wd:${e.items.release_group.id};
+        wdt:${e.properties.performer.id} [].
+    }`;$("#toc").after('<div id="discographies"></div>'),(await y(t,i)).boolean&&(await R(a,t),await x(a,t));let s=n=>n.mainsnak.datavalue.value.id===e.items.musical_work_composition.id;a.claims.P31.find(s)&&C(r,e)});function N(){var a;switch(window.location.hostname){case"www.wikidata.org":a={sparqlEndpoint:"https://query.wikidata.org/sparql?format=json",entities:{items:{release_group:{id:"Q108346082"},release:{id:"Q2031291"},various_artists:{id:"Q3108914"},musical_work_composition:{id:"Q105543609"},song:{id:"Q7366"},audio_track:{id:"Q7302866"},music_track_with_vocals:{id:"Q55850593"},music_track_without_vocals:{id:"Q55850643"}},properties:{instance_of:new l("P31","instance_of"),subclass_of:new l("P279","subclass_of"),title:new h("P1476","title"),genre:new l("P136","genre"),performer:new l("P175","performer"),record_label:new l("P264","record_label"),publication_date:new g("P577","publication_date"),number_of_parts_of_this_work:new w("P2635","number_of_parts_of_this_work"),tracklist:new l("P658","tracklist"),release_of:new l("P9831","release_of"),form_of_creative_work:new l("P7937","form_of_creative_work"),language_of_work_or_name:new l("P407","language_of_work_or_name"),recording_performance_of:new l("P2550","recording_performance_of")}}};break;default:throw new Error("This script is not supported on this site. Please add siteData")}return a}})();

@@ -1,5 +1,13 @@
 {
     "compilerOptions": {
-        "lib": ["es2015", "dom"]
-    }
+        "lib": ["es2017", "dom"],   
+        "module": "es6",
+    },
+    "include": [
+        "./DiscographiesClasses.ts",
+        "./Discographies.ts",
+        "CreateRelease.ts",
+        "./ShowDiscography.ts",
+        "./node_modules/"
+    ]
 }
