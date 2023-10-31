@@ -6,7 +6,7 @@ require('esbuild').build({
     banner: {
       js: `/**
       * THIS IS A COMPILED TYPESCRIPT FILE
-      * SEE THE ACTUAL SOURCE CODE AT User:Lectrician1/discographies.js/ts.js
+      * SEE THE ACTUAL SOURCE CODE AT https://github.com/lectrician1/Discographies
       * 
       * Name: discographies.js
       * Description: Shows useful discography data and functions on 
